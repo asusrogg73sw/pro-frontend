@@ -8,6 +8,8 @@ import { store } from "./store"; // Redux store import
 import "./index.css";
 import App from "./App.tsx";
 import HomePage from "./pages/HomePage.tsx";
+import LoginPage from "./pages/LoginPage.tsx";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 // Router setup
 const router = createBrowserRouter([
@@ -16,12 +18,17 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       {
-        path: "/",
-        element: <HomePage />,
+        element: <ProtectedRoute />,
+        children: [
+          {
+            path: "/",
+            element: <HomePage />,
+          },
+        ],
       },
       {
         path: "/login",
-        element: <h1 className="text-3xl font-bold">Login Page</h1>,
+        element: <LoginPage />,
       },
     ],
   },
@@ -33,5 +40,5 @@ createRoot(document.getElementById("root")!).render(
     <Provider store={store}>
       <RouterProvider router={router} />
     </Provider>
-  </StrictMode>
+  </StrictMode>,
 );
