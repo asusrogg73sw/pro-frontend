@@ -1,7 +1,10 @@
+// src/pages/LoginPage.tsx
+
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { loginUser, clearError } from "../store/authSlice";
+import { resetAdminState } from "../store/adminSlice"; // ✅ new import
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -12,14 +15,16 @@ const LoginPage = () => {
 
   const { userInfo, loading, error } = useAppSelector((state) => state.auth);
 
-  // Agar user login ho jaye, to use home par bhej do
+  // ✅ Updated useEffect
   useEffect(() => {
     if (userInfo) {
+      dispatch(resetAdminState()); // 👈 clear old admin (403) errors
       navigate("/");
     }
+
     return () => {
-      dispatch(clearError());
-    }; // Page chorrte waqt purane errors saaf
+      dispatch(clearError()); // cleanup old auth errors
+    };
   }, [userInfo, navigate, dispatch]);
 
   const submitHandler = (e: React.FormEvent) => {
@@ -58,7 +63,9 @@ const LoginPage = () => {
         </div>
 
         <div className="mb-6">
-          <label className="block text-gray-600 text-sm mb-2">Password</label>
+          <label className="block text-gray-600 text-sm mb-2">
+            Password
+          </label>
           <input
             type="password"
             className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"

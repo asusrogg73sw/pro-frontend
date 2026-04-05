@@ -1,10 +1,16 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+import Sidebar from "./components/Sidebar";
 
 function App() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar yahan aayega */}
-      <main className="container mx-auto px-4 py-8">
+    <div className="flex bg-gray-100 min-h-screen">
+      {/* Agar login page nahi hai, to sidebar dikhao */}
+      {!isLoginPage && <Sidebar />}
+      
+      <main className="flex-1 p-8 overflow-y-auto">
         <Outlet />
       </main>
     </div>

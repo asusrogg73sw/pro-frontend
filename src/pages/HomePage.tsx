@@ -1,18 +1,43 @@
+// src/pages/HomePage.tsx
+
 import { useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '../store/hooks'; // Naye hooks
+import { useAppDispatch, useAppSelector } from '../store/hooks'; // Custom hooks
 import { fetchStats } from '../store/adminSlice';
 
 const HomePage = () => {
   const dispatch = useAppDispatch();
   const { stats, loading, error } = useAppSelector((state) => state.admin);
+  const { userInfo } = useAppSelector((state) => state.auth);
 
+  // Fetch stats only if user is admin
   useEffect(() => {
-    dispatch(fetchStats());
-  }, [dispatch]);
+    if (userInfo?.isAdmin) {
+      dispatch(fetchStats());
+    }
+  }, [dispatch, userInfo]);
 
+  // Non-admin view
+  if (!userInfo?.isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
+        <h2 className="text-2xl font-bold text-gray-800">Welcome, {userInfo?.name}!</h2>
+        <p className="text-gray-500 mt-2 text-lg">You don't have admin permissions to view stats.</p>
+      </div>
+    );
+  }
+
+  // Loading state
   if (loading) return <div className="text-center py-10">Loading Live Stats...</div>;
-  if (error) return <div className="text-red-500">Error: {error}</div>;
 
+  // Error state
+  if (error)
+    return (
+      <div className="text-red-500 font-bold p-4 bg-red-50 rounded">
+        ⚠️ Error: {error}
+      </div>
+    );
+
+  // Admin stats cards
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       {/* Revenue Card */}
