@@ -171,9 +171,9 @@ const EditProductPage = () => {
             <div className="mt-3 w-32 h-32 border rounded-lg overflow-hidden bg-gray-50">
               <img
                 src={
-                  preview.startsWith("http") || preview.startsWith("/")
+                  preview.startsWith("blob:")
                     ? preview
-                    : preview
+                    : `http://localhost:5000${preview}`
                 }
                 alt="Preview"
                 className="w-full h-full object-cover"
