@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import ProductListPage from "./pages/ProductListPage.tsx";
 import AddProductPage from "./pages/AddProductPage.tsx";
+import EditProductPage from "./pages/EditProductPage.tsx";
 
 // Router setup
 const router = createBrowserRouter([
@@ -38,8 +39,9 @@ const router = createBrowserRouter([
       },
       {
         path: "/products/add",
-        element: <AddProductPage />
-      }
+        element: <AddProductPage />,
+      },
+      { path: "/products/edit/:id", element: <EditProductPage /> },
     ],
   },
 ]);
