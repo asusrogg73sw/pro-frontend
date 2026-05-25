@@ -21,6 +21,8 @@ import OrderListPage from "./pages/OrderListPage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import AdminRoute from "./components/AdminRoute";
 
+import UserListPage from "./pages/UserListPage.tsx";
+
 // Router setup
 const router = createBrowserRouter([
   {
@@ -76,6 +78,7 @@ const router = createBrowserRouter([
             path: "/products/edit/:id",
             element: <EditProductPage />,
           },
+          { path: "/users", element: <UserListPage /> },
         ],
       },
     ],
