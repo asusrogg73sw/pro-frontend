@@ -1,5 +1,4 @@
-// src/pages/OrderPaymentPage.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react"; // Added useCallback
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store/hooks";
 import API from "../api/axios"; 
@@ -9,7 +8,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { CheckoutForm } from "../components/CheckoutForm";
 
-// 🚀 APNI STRIPE PUBLISHABLE KEY APNI MARZI SE SET KAREIN
+// Stripe Publishable Key Setup
 const stripePromise = loadStripe("pk_test_51R5zJMRrJPw2wOndAzU0oSkCwYoOZVNLeXb2G5mFdbpA5RY0CAui80KtijZrCYXnh2mne08XnrEupVZ6cNWgAd8D00SPrIKjp7");
 
 interface OrderItem {
@@ -48,28 +47,37 @@ const OrderPaymentPage = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync API function asynchronously to pull live payment status
-  const fetchOrderDetails = async () => {
+  // 🚀 Memoized using useCallback so it can be safely passed to child components
+  const fetchOrderDetails = useCallback(async () => {
     try {
       const { data } = await API.get(`/orders/${id}`);
       setOrder(data);
       setError(null);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to sync order details.");
+    } catch (err) {
+      const errorBridge = err as { response?: { data?: { message?: string } } };
+      setError(errorBridge.response?.data?.message || "Failed to sync order details.");
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (!userInfo) {
       navigate("/login");
       return;
     }
-    fetchOrderDetails();
-  }, [id, userInfo, navigate]);
 
-  if (loading) return <div className="text-center py-24 text-gray-400 font-medium tracking-wide animate-pulse">Synchronizing checkout protocols... 📦</div>;
+    fetchOrderDetails();
+  }, [userInfo, navigate, fetchOrderDetails]); // Clean dependencies
+
+  if (loading) {
+    return (
+      <div className="text-center py-24 text-gray-400 font-medium tracking-wide animate-pulse">
+        Synchronizing checkout protocols... 📦
+      </div>
+    );
+  }
+  
   if (error) return <div className="text-center py-24 text-red-500 font-semibold">{error}</div>;
   if (!order) return <div className="text-center py-24 text-gray-500">Order context missing.</div>;
 
@@ -118,7 +126,7 @@ const OrderPaymentPage = () => {
                   <div className="flex items-center gap-4">
                     <img src={item.image} alt={item.name} className="w-14 h-14 object-cover rounded-xl border border-gray-100 shadow-sm bg-gray-50" />
                     <div>
-                      <h4 className="text-sm font-black text-gray-800 truncate max-w-[200px] md:max-w-sm">{item.name}</h4>
+                      <h4 className="text-sm font-black text-gray-800 truncate max-w-50 md:max-w-sm">{item.name}</h4>
                       <p className="text-xs text-gray-400 font-bold mt-0.5">Quantity: {item.qty} &bull; ${item.price.toFixed(2)} each</p>
                     </div>
                   </div>
@@ -158,14 +166,14 @@ const OrderPaymentPage = () => {
               </div>
             </div>
 
-            {/* 🔒 ADVANCED CONTEXT TOGGLE CONDITIONAL BLOCK */}
+            {/* Paid vs Unpaid Conditional Rendering */}
             {order.isPaid ? (
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-800 p-6 rounded-2xl text-center space-y-3 shadow-inner">
+              <div className="bg-linear-to-br from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-800 p-6 rounded-2xl text-center space-y-3 shadow-inner">
                 <CheckCircle2 size={36} className="text-emerald-500 mx-auto animate-pulse" />
                 <div>
                   <p className="text-base font-black">Order Fully Paid!</p>
                   <p className="text-xs text-emerald-600 font-medium mt-1">
-                    Paid on {new Date(order.paidAt || "").toLocaleDateString()} &bull; Stripe Verified
+                    Paid on {order.paidAt ? new Date(order.paidAt).toLocaleDateString() : "Recent"} &bull; Stripe Verified
                   </p>
                 </div>
                 <button 
@@ -176,7 +184,6 @@ const OrderPaymentPage = () => {
                 </button>
               </div>
             ) : (
-              /* IS UNPAID STATE: ACCEPT FRESH TRANSACTION CONTAINER ENGINES */
               <Elements stripe={stripePromise}>
                 <CheckoutForm
                   orderId={order._id}

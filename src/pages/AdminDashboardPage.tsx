@@ -68,7 +68,7 @@ const AdminDashboardPage = () => {
       </div>
 
       {/* Dynamic Graph Placeholder Context */}
-      <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center justify-center min-h-[220px]">
+      <div className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center justify-center min-h-55">
         <div className="text-center text-gray-400 space-y-2">
           <TrendingUp className="mx-auto text-blue-500" size={32} />
           <h4 className="font-bold text-gray-700 text-sm">Monthly Sales & Top Products Connected</h4>

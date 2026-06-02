@@ -1,14 +1,14 @@
-// src/pages/OrderListPage.tsx
-import  { useEffect } from "react";
+import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { listOrders, deliverOrder } from "../store/orderSlice";
+import type { Order } from "../store/orderSlice"
 import { useNavigate } from "react-router-dom";
+import { ShieldAlert, CreditCard, Truck } from "lucide-react";
 
 const OrderListPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  // Redux store se orders uthana
   const { orders, loading, error } = useAppSelector((state) => state.orders);
 
   useEffect(() => {
@@ -16,9 +16,7 @@ const OrderListPage = () => {
   }, [dispatch]);
 
   const deliverHandler = async (id: string) => {
-    if (
-      window.confirm("Kya aap is order ko Delivered mark karna chahte hain?")
-    ) {
+    if (window.confirm("Kya aap is order ko Delivered mark karna chahte hain?")) {
       try {
         await dispatch(deliverOrder(id)).unwrap();
         alert("Order status updated to Delivered! 🚚");
@@ -28,92 +26,83 @@ const OrderListPage = () => {
     }
   };
 
-  if (loading)
-    return <div className="text-center mt-10 font-bold">Loading Orders...</div>;
-  if (error)
-    return (
-      <div className="text-center mt-10 text-red-500 font-bold">{error}</div>
-    );
+  if (loading) return <div className="text-center py-24 text-gray-400 font-medium tracking-wide animate-pulse">Fetching Admin Logistics Manifest Array...</div>;
+  if (error) return <div className="text-center py-24 text-red-500 font-semibold">{error}</div>;
 
   return (
-    <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100 max-w-6xl mx-auto mt-6">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">
+    <div className="p-4 md:p-8 bg-white rounded-3xl shadow-md border border-gray-100 max-w-6xl mx-auto mt-6 min-h-screen">
+      <h2 className="text-3xl font-black mb-8 text-gray-900 flex items-center gap-2 tracking-tight">
+        <ShieldAlert size={30} className="text-blue-600" />
         Orders Command Center
       </h2>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b border-gray-200 text-gray-400 text-sm uppercase">
-              <th className="p-4">Order ID</th>
-              <th className="p-4">Customer</th>
-              <th className="p-4">Date</th>
-              <th className="p-4">Total</th>
-              <th className="p-4">Paid</th>
-              <th className="p-4">Delivered</th>
-              <th className="p-4">Actions</th>
+            <tr className="bg-gray-50/70 text-xs font-black text-gray-500 uppercase tracking-wider border-b border-gray-100">
+              <th className="p-5">Order ID</th>
+              <th className="p-5">Customer Profile</th>
+              <th className="p-5">Timestamp</th>
+              <th className="p-5">Total Fee</th>
+              <th className="p-5">Financial Settlement</th>
+              <th className="p-5">Logistics Node</th>
+              <th className="p-5 text-center">Operation Control</th>
             </tr>
           </thead>
-          <tbody className="text-gray-600 text-sm divide-y divide-gray-100">
-            {orders.map((order: any) => (
-              <tr key={order._id} className="hover:bg-gray-50 transition">
-                <td className="p-4 font-mono text-xs text-blue-600">
-                  {order._id}
-                </td>
-                <td className="p-4 font-medium text-gray-800">
-                  {order.user && order.user.name}
-                </td>
-                <td className="p-4">
-                  {new Date(order.createdAt).toLocaleDateString()}
-                </td>
-                <td className="p-4 font-bold text-gray-800">
-                  ${order.totalPrice}
-                </td>
-                <td className="p-4">
-                  {order.isPaid ? (
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
-                      Paid ({new Date(order.paidAt).toLocaleDateString()})
-                    </span>
-                  ) : (
-                    <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-semibold">
-                      Not Paid
-                    </span>
-                  )}
-                </td>
-                <td className="p-4">
-                  {order.isDelivered ? (
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
-                      Delivered
-                    </span>
-                  ) : (
-                    <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-semibold">
-                      Pending
-                    </span>
-                  )}
-                </td>
-                <td className="p-4 flex gap-2">
-                  {/* Agar order paid nahi hai, to Pay Now ka button dikhao */}
-                  {!order.isPaid && (
-                    <button
-                      onClick={() => navigate(`/order-pay/${order._id}`)}
-                      className="bg-green-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-green-700 transition shadow-sm"
-                    >
-                      Pay Now 💳
-                    </button>
-                  )}
+          <tbody className="divide-y divide-gray-100 text-sm font-medium text-gray-600">
+            {orders.map((order: Order) => {
+              // Safe type detection for populated user data
+              const customerName = typeof order.user === "object" && order.user !== null 
+                ? order.user.name 
+                : "Unknown User";
 
-                  {/* Aapka purana Mark as Delivered wala button */}
-                  {order.isPaid && !order.isDelivered && (
-                    <button
-                      onClick={() => deliverHandler(order._id)}
-                      className="bg-blue-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-sm"
-                    >
-                      Mark As Delivered
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+              return (
+                <tr key={order._id} className="hover:bg-slate-50/50 transition duration-150">
+                  <td className="p-5 font-mono text-xs text-blue-600 font-bold">{order._id}</td>
+                  <td className="p-5 text-gray-900 font-bold">{customerName}</td>
+                  <td className="p-5 text-gray-500">
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "N/A"}
+                  </td>
+                  <td className="p-5 font-black text-gray-900">${order.totalPrice.toFixed(2)}</td>
+                  <td className="p-5">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold ${order.isPaid ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
+                      {order.isPaid ? "Paid" : "Unpaid"}
+                    </span>
+                  </td>
+                  <td className="p-5">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold ${order.isDelivered ? "bg-blue-50 text-blue-700 border border-blue-100" : "bg-yellow-50 text-yellow-700 border border-yellow-100"}`}>
+                      {order.isDelivered ? "Delivered" : "Pending Processing"}
+                    </span>
+                  </td>
+                  <td className="p-5 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      {!order.isPaid && (
+                        <button
+                          onClick={() => navigate(`/order-pay/${order._id}`)}
+                          className="inline-flex items-center gap-1 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-black shadow-sm transition"
+                        >
+                          <CreditCard size={12} />
+                          Pay Now
+                        </button>
+                      )}
+
+                      {order.isPaid && !order.isDelivered && (
+                        <button
+                          onClick={() => deliverHandler(order._id)}
+                          className="inline-flex items-center gap-1 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-black shadow-sm transition"
+                        >
+                          <Truck size={12} />
+                          Mark Dispatched
+                        </button>
+                      )}
+                      {order.isPaid && order.isDelivered && (
+                        <span className="text-xs text-gray-400 font-bold italic tracking-wide">Completed</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

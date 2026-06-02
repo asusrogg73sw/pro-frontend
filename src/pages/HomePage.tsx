@@ -5,7 +5,7 @@ const HomePage = () => {
   return (
     <div className="space-y-6">
       {/* 🔥 Ek pyara sa commercial banner layout */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-10 text-white shadow-lg shadow-blue-100">
+      <div className="bg-linear-to-r from-blue-600 to-indigo-700 rounded-3xl p-6 md:p-10 text-white shadow-lg shadow-blue-100">
         <h1 className="text-2xl md:text-4xl font-black mb-2 tracking-tight">
           Welcome to PROSTORE
         </h1>

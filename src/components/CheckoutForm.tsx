@@ -101,7 +101,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
     <form onSubmit={handleSubmit} className="space-y-6">
       
       {/* 💳 VIRTUAL CREDIT CARD MIRROR CONTAINER */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 h-48 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between transform transition duration-300 border border-white/10 select-none">
+      <div className="relative overflow-hidden bg-linear-to-br from-slate-900 via-indigo-950 to-blue-900 h-48 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between transform transition duration-300 border border-white/10 select-none">
         <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl"></div>
         
         <div className="flex justify-between items-start">
@@ -125,7 +125,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
         </div>
 
         <div className="flex justify-between items-end">
-          <div className="max-w-[160px]">
+          <div className="max-w-40">
             <p className="text-[9px] uppercase font-mono text-slate-400 tracking-wider">Card Holder</p>
             <p className="text-xs font-bold font-mono tracking-wide truncate">{customerEmail.split('@')[0].toUpperCase()}</p>
           </div>
