@@ -37,6 +37,14 @@ interface LoginCredentials {
   [key: string]: unknown;
 }
 
+interface RegisterCredentials {
+  name: string;
+  email: string;
+  password?: string;
+  age?: number;
+  [key: string]: unknown;
+}
+
 // 1. Login Action
 export const loginUser = createAsyncThunk(
   "auth/login",
@@ -52,6 +60,26 @@ export const loginUser = createAsyncThunk(
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       return rejectWithValue(err.response?.data?.message || "Login failed");
+    }
+  },
+);
+
+// NEW FIX: Register Action (Sign Up Flow)
+export const registerUserAction = createAsyncThunk(
+  "auth/register",
+  async (userData: RegisterCredentials, { dispatch, rejectWithValue }) => {
+    try {
+      // Backend routes ke mutabiq POST /api/users register ke liye hai
+      const response = await API.post("/users", userData);
+      localStorage.setItem("userInfo", JSON.stringify(response.data));
+      
+      // Registration ke sath hi user specific cart active kar do
+      dispatch(initializeCart(response.data._id));
+      
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return rejectWithValue(err.response?.data?.message || "Registration failed");
     }
   },
 );
@@ -104,6 +132,19 @@ const authSlice = createSlice({
         state.userInfo = action.payload;
       })
       .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Register flow
+      .addCase(registerUserAction.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUserAction.fulfilled, (state, action) => {
+        state.loading = false;
+        state.userInfo = action.payload;
+      })
+      .addCase(registerUserAction.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

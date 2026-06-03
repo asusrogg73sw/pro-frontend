@@ -10,6 +10,8 @@ import App from "./App.tsx";
 // Pages
 import HomePage from "./pages/HomePage.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
+// 🚀 NEW FIX: Register page component ko import list me shamil kiya
+import RegisterPage from "./pages/RegisterPage.tsx"; 
 import ProductListPage from "./pages/ProductListPage.tsx";
 import AddProductPage from "./pages/AddProductPage.tsx";
 import EditProductPage from "./pages/EditProductPage.tsx";
@@ -40,6 +42,11 @@ const router = createBrowserRouter([
       {
         path: "/login",
         element: <LoginPage />,
+      },
+      // 🚀 NEW FIX: Naye customer registration flow ke liye route inject kiya
+      {
+        path: "/register",
+        element: <RegisterPage />,
       },
       { 
         path: "/cart", 

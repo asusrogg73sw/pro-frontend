@@ -1,10 +1,10 @@
 // src/pages/LoginPage.tsx
 
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Link import kiya
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { loginUser, clearError } from "../store/authSlice";
-import { resetAdminState } from "../store/adminSlice"; // ✅ new import
+import { resetAdminState } from "../store/adminSlice";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -15,10 +15,9 @@ const LoginPage = () => {
 
   const { userInfo, loading, error } = useAppSelector((state) => state.auth);
 
-  // ✅ Updated useEffect
   useEffect(() => {
     if (userInfo) {
-      dispatch(resetAdminState()); // 👈 clear old admin (403) errors
+      dispatch(resetAdminState()); // clear old admin (403) errors
       navigate("/");
     }
 
@@ -39,7 +38,7 @@ const LoginPage = () => {
         className="bg-white p-8 rounded-2xl shadow-xl w-96 border border-gray-100"
       >
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
-          Admin Login
+          Account Login
         </h2>
 
         {error && (
@@ -79,10 +78,18 @@ const LoginPage = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 disabled:bg-blue-300"
+          className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition duration-300 disabled:bg-blue-300 mb-4"
         >
           {loading ? "Authenticating..." : "Login Now"}
         </button>
+
+        {/* 👇 Added Register Link Option */}
+        <div className="text-center text-sm text-gray-500">
+          New Customer?{" "}
+          <Link to="/register" className="text-blue-600 hover:underline font-medium">
+            Register Here
+          </Link>
+        </div>
       </form>
     </div>
   );

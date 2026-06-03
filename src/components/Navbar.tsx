@@ -27,10 +27,11 @@ const Navbar = () => {
   };
 
   // Click outside to close dropdown handler
-  useEffect(() => {
+ useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        isOpen(false);
+        // Change isOpen(false) to setIsOpen(false)
+        setIsOpen(false); 
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
