@@ -1,5 +1,34 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+// FIX: Imported using 'import type' to respect verbatimModuleSyntax
+import type { PayloadAction } from "@reduxjs/toolkit";
 import API from "../api/axios";
+
+interface AddressState {
+  country: string;
+  firstName: string;
+  lastName: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  phone: string;
+}
+
+interface UserInfo {
+  _id?: string;
+  name: string;
+  email: string;
+  shippingAddress?: AddressState;
+  isAdmin?: boolean;
+  token?: string;
+  // FIX: Replaced 'any' with 'unknown' to pass strict eslint rules
+  [key: string]: unknown;
+}
+
+interface AuthState {
+  userInfo: UserInfo | null;
+  loading: boolean;
+  error: string | null;
+}
 
 interface LoginCredentials {
   email: string;
@@ -30,24 +59,29 @@ export const logoutUser = createAsyncThunk(
       await API.post("/users/logout");
       localStorage.removeItem("userInfo");
     } catch { 
-      // NEW FIX: Catch block se variable completely remove kar diya taake unused-vars error permanently khatam ho jaye
       return rejectWithValue("Logout failed");
     }
   },
 );
 
+const initialState: AuthState = {
+  userInfo: localStorage.getItem("userInfo")
+    ? JSON.parse(localStorage.getItem("userInfo")!)
+    : null,
+  loading: false,
+  error: null,
+};
+
 const authSlice = createSlice({
   name: "auth",
-  initialState: {
-    userInfo: localStorage.getItem("userInfo")
-      ? JSON.parse(localStorage.getItem("userInfo")!)
-      : null,
-    loading: false,
-    error: null as string | null,
-  },
+  initialState,
   reducers: {
     clearError: (state) => {
       state.error = null;
+    },
+    setCredentials: (state, action: PayloadAction<UserInfo>) => {
+      state.userInfo = action.payload;
+      localStorage.setItem("userInfo", JSON.stringify(action.payload));
     },
   },
   extraReducers: (builder) => {
@@ -73,5 +107,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { clearError } = authSlice.actions;
+export const { clearError, setCredentials } = authSlice.actions;
 export default authSlice.reducer;

@@ -1,4 +1,3 @@
-// src/components/CheckoutForm.tsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -10,12 +9,13 @@ import {
 } from "@stripe/react-stripe-js";
 import { CreditCard, ShieldCheck, Lock, Loader2 } from "lucide-react";
 import API from "../api/axios";
+import { useAppSelector } from "../store/hooks";
 
 interface CheckoutFormProps {
   orderId: string;
   totalPrice: number;
   customerEmail: string;
-  onSuccess: () => Promise<void>; // Promise handle karne ke liye update kiya
+  onSuccess: () => Promise<void>;
 }
 
 export const CheckoutForm: React.FC<CheckoutFormProps> = ({
@@ -27,11 +27,11 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
+  const { userInfo } = useAppSelector((state) => state.auth);
   
   const [paying, setPaying] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Live Virtual Card Mirror States
   const [cardNumberDisplay, setCardNumberDisplay] = useState("•••• •••• •••• ••••");
   const [cardExpiryDisplay, setCardExpiryDisplay] = useState("MM/YY");
   const [cardBrand, setCardBrand] = useState("unknown");
@@ -53,7 +53,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       setCardBrand(event.brand);
     }
     if (event.complete) {
-      // Jab valid dummy 4242 context poora ho jaye
       setCardNumberDisplay("4242 4242 4242 4242");
     } else {
       setCardNumberDisplay("•••• •••• •••• ••••");
@@ -62,21 +61,36 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!stripe || !elements || paying) return; // double submit block
+    if (!stripe || !elements || paying) return;
 
     try {
       setPaying(true);
       setErrorMessage(null);
 
-      // 1. Backend se Payment Intent Generate karwaya
-      const { data } = await API.post("/payment/process", { orderId });
+      // FIX: Clean format verification passing to payment router endpoint
+      const currentAddress = userInfo?.shippingAddress ? {
+        firstName: userInfo.shippingAddress.firstName,
+        lastName: userInfo.shippingAddress.lastName,
+        address: userInfo.shippingAddress.address,
+        city: userInfo.shippingAddress.city,
+        postalCode: userInfo.shippingAddress.postalCode,
+        country: userInfo.shippingAddress.country,
+        phone: userInfo.shippingAddress.phone
+      } : undefined;
+
+      const { data } = await API.post("/payment/process", { 
+        orderId,
+        shippingAddress: currentAddress
+      });
       const clientSecret = data.client_secret;
 
-      // 2. Stripe Secure Servers par Request hit ki
       const result = await stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: elements.getElement(CardNumberElement)!,
-          billing_details: { email: customerEmail },
+          billing_details: { 
+            email: customerEmail,
+            name: userInfo?.name || undefined
+          },
         },
       });
 
@@ -84,11 +98,14 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
         setErrorMessage(result.error.message || "Payment Declined.");
         setPaying(false);
       } else if (result.paymentIntent?.status === "succeeded") {
-        // 🎉 PAYMENT SUCCESSFUL ON STRIPE
-        // Local state fetch function ko invoke karein
+        // Backend update parameters synchronization trigger
+        await API.put(`/orders/${orderId}/pay`, {
+          id: result.paymentIntent.id,
+          status: result.paymentIntent.status,
+          shippingAddress: currentAddress
+        });
+
         await onSuccess();
-        
-        // Instant Redirection taake double transaction execute hi na ho sake
         navigate("/my-orders");
       }
     } catch (err: any) {
@@ -99,8 +116,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      
-      {/* 💳 VIRTUAL CREDIT CARD MIRROR CONTAINER */}
       <div className="relative overflow-hidden bg-linear-to-br from-slate-900 via-indigo-950 to-blue-900 h-48 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between transform transition duration-300 border border-white/10 select-none">
         <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl"></div>
         
@@ -136,7 +151,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
         </div>
       </div>
 
-      {/* 📥 REAL STRIPE INPUT WRAPPERS */}
       <div className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-gray-600 block">Card Number</label>
@@ -170,7 +184,6 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
         </div>
       )}
 
-      {/* SUBMIT COMPONENT */}
       <button
         type="submit"
         disabled={paying || !stripe}
