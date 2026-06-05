@@ -18,13 +18,13 @@ export interface Order {
   } | string; 
   orderItems: OrderItem[];
   shippingAddress: {
-    firstName: string;   // 🚀 Added to match schema persistence
-    lastName: string;    // 🚀 Added to match schema persistence
+    firstName: string;   
+    lastName: string;    
     address: string;
     city: string;
     postalCode: string;
     country: string;
-    phone: string;       // 🚀 Added to match schema persistence
+    phone: string;       
   };
   paymentMethod: string;
   itemsPrice: number;
@@ -176,19 +176,15 @@ const orderSlice = createSlice({
         state.orders.push(action.payload);
       })
 
-      .addCase(deleteOrder.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
+      // ⚡ BACKGROUND ACTION MANAGEMENT (No screen flickering)
       .addCase(deleteOrder.fulfilled, (state, action) => {
-        state.loading = false;
         state.orders = state.orders.filter((order) => order._id !== action.payload);
       })
       .addCase(deleteOrder.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload || "An error occurred";
+        state.error = action.payload || "An error occurred during deletion";
       })
 
+      // LOCK SYNC IN DATA MANIFESTARRAY
       .addCase(toggleOrderLockAction.fulfilled, (state, action) => {
         const index = state.orders.findIndex((o) => o._id === action.payload._id);
         if (index !== -1) {

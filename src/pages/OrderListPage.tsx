@@ -1,14 +1,16 @@
 import { useEffect } from "react";
-import { useAppDispatch, useAppSelector } from "../store/hooks";
-import { listOrders, deliverOrder } from "../store/orderSlice";
-import type { Order } from "../store/orderSlice"
+// ✅ FIXED: Direct store folder se custom hooks ko import karein, separate /hooks folder nahi hai!
+import { useAppDispatch, useAppSelector } from "../store/hooks"; 
+import { listOrders, deliverOrder, deleteOrder, toggleOrderLockAction } from "../store/orderSlice";
+import type { Order } from "../store/orderSlice";
 import { useNavigate } from "react-router-dom";
-import { ShieldAlert, CreditCard, Truck } from "lucide-react";
+import { ShieldAlert, CreditCard, Truck, Lock, Unlock, Trash2 } from "lucide-react";
 
 const OrderListPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
+  // ✅ FIXED: Ab 'state.orders' par implicit any ka error hamesha ke liye khatam!
   const { orders, loading, error } = useAppSelector((state) => state.orders);
 
   useEffect(() => {
@@ -26,11 +28,35 @@ const OrderListPage = () => {
     }
   };
 
+  const toggleLockHandler = async (id: string) => {
+    try {
+      await dispatch(toggleOrderLockAction(id)).unwrap();
+    } catch (err) {
+      alert("Lock toggle configuration failed: " + err);
+    }
+  };
+
+  const deleteHandler = async (order: Order) => {
+    if (order.isUserLocked) {
+      alert("⚠️ Yeh order locked hai! Isko delete karne se pehle unlock karein.");
+      return;
+    }
+
+    if (window.confirm(`Kya aap order ${order._id} ko hamesha ke liye delete aur stock revert karna chahte hain?`)) {
+      try {
+        await dispatch(deleteOrder(order._id)).unwrap();
+        alert("Order permanently removed from logistics manifest.");
+      } catch (err) {
+        alert("Deletion sequence failed: " + err);
+      }
+    }
+  };
+
   if (loading) return <div className="text-center py-24 text-gray-400 font-medium tracking-wide animate-pulse">Fetching Admin Logistics Manifest Array...</div>;
   if (error) return <div className="text-center py-24 text-red-500 font-semibold">{error}</div>;
 
   return (
-    <div className="p-4 md:p-8 bg-white rounded-3xl shadow-md border border-gray-100 max-w-6xl mx-auto mt-6 min-h-screen">
+    <div className="p-4 md:p-8 bg-white rounded-3xl shadow-md border border-gray-100 max-w-7xl mx-auto mt-6 min-h-screen">
       <h2 className="text-3xl font-black mb-8 text-gray-900 flex items-center gap-2 tracking-tight">
         <ShieldAlert size={30} className="text-blue-600" />
         Orders Command Center
@@ -51,7 +77,6 @@ const OrderListPage = () => {
           </thead>
           <tbody className="divide-y divide-gray-100 text-sm font-medium text-gray-600">
             {orders.map((order: Order) => {
-              // Safe type detection for populated user data
               const customerName = typeof order.user === "object" && order.user !== null 
                 ? order.user.name 
                 : "Unknown User";
@@ -76,10 +101,24 @@ const OrderListPage = () => {
                   </td>
                   <td className="p-5 text-center">
                     <div className="flex items-center justify-center gap-2">
+                      
+                      {/* LOCK / UNLOCK TOGGLE */}
+                      <button
+                        onClick={() => toggleLockHandler(order._id)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition shadow-sm ${
+                          order.isUserLocked 
+                            ? "bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100" 
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        }`}
+                      >
+                        {order.isUserLocked ? <Lock size={12} className="text-amber-600" /> : <Unlock size={12} />}
+                        <span>{order.isUserLocked ? "Locked" : "Unlock"}</span>
+                      </button>
+
                       {!order.isPaid && (
                         <button
                           onClick={() => navigate(`/order-pay/${order._id}`)}
-                          className="inline-flex items-center gap-1 bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-black shadow-sm transition"
+                          className="inline-flex items-center gap-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-black shadow-sm transition"
                         >
                           <CreditCard size={12} />
                           Pay Now
@@ -89,15 +128,29 @@ const OrderListPage = () => {
                       {order.isPaid && !order.isDelivered && (
                         <button
                           onClick={() => deliverHandler(order._id)}
-                          className="inline-flex items-center gap-1 bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-black shadow-sm transition"
+                          className="inline-flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-2.5 py-1.5 rounded-xl text-xs font-black shadow-sm transition"
                         >
                           <Truck size={12} />
                           Mark Dispatched
                         </button>
                       )}
+
                       {order.isPaid && order.isDelivered && (
-                        <span className="text-xs text-gray-400 font-bold italic tracking-wide">Completed</span>
+                        <span className="text-xs text-gray-400 font-bold italic tracking-wide px-1">Completed</span>
                       )}
+
+                      {/* DELETE ACTION BUTTON */}
+                      <button
+                        onClick={() => deleteHandler(order)}
+                        className={`inline-flex items-center justify-center p-1.5 rounded-xl transition shadow-sm ${
+                          order.isUserLocked 
+                            ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50" 
+                            : "bg-red-50 text-red-600 hover:bg-red-100"
+                        }`}
+                        disabled={order.isUserLocked}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
