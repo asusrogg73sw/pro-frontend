@@ -1,4 +1,3 @@
-// src/components/Navbar.tsx
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
@@ -27,10 +26,9 @@ const Navbar = () => {
   };
 
   // Click outside to close dropdown handler
- useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        // Change isOpen(false) to setIsOpen(false)
         setIsOpen(false); 
       }
     };
@@ -79,7 +77,6 @@ const Navbar = () => {
             </Link>
 
             {userInfo ? (
-              /* 🚀 NEW FIX: Unified User Dropdown Container */
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setIsOpen(!isOpen)}
@@ -90,7 +87,6 @@ const Navbar = () => {
                   <ChevronDown size={14} className={`transform transition-transform ${isOpen ? "rotate-180" : ""}`} />
                 </button>
 
-                {/* Dropdown Menu Cards */}
                 {isOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl border border-gray-100 shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-3 duration-200">
                     

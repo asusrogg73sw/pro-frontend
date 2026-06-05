@@ -1,8 +1,7 @@
 import { createSlice } from "@reduxjs/toolkit";
-// FIX: Jab 'verbatimModuleSyntax' enabled ho, to types ko 'import type' ke sath mangwana zaroori hai
 import type { PayloadAction } from "@reduxjs/toolkit";
 
-// Cart ke single item ka structure (Type safety ke liye)
+// Cart ke single item ka structure
 export interface CartItem {
   product: string; // Product ki unique ID (MongoDB ID)
   name: string; // Product ka naam
@@ -14,20 +13,28 @@ export interface CartItem {
 
 // Cart state ka main structure
 interface CartState {
-  cartItems: CartItem[]; // Items ki array, jo CartItem type ki hogi
+  cartItems: CartItem[]; 
 }
 
-// Pehle se saved userInfo nikalne ke liye taake guest/initial state set ho sake
-const savedUser = localStorage.getItem("userInfo") 
-  ? JSON.parse(localStorage.getItem("userInfo")!) 
-  : null;
-
-const getCartKey = (userId?: string) => userId ? `cartItems_${userId}` : "cartItems_guest";
-
-// NEW FIX: LocalStorage se safe data parsing taake runtime par parsing crash na ho
-const loadCartFromStorage = (userId?: string): CartItem[] => {
+const getCartKey = (): string => {
   try {
-    const key = getCartKey(userId);
+    const userInfo = localStorage.getItem("userInfo");
+    if (userInfo) {
+      const parsedUser = JSON.parse(userInfo);
+      if (parsedUser && parsedUser._id) {
+        return `cartItems_${parsedUser._id}`;
+      }
+    }
+  } catch (error) {
+    console.error("Error parsing userInfo from localStorage", error);
+  }
+  return "cartItems_guest";
+};
+
+// LocalStorage se safe data parsing
+const loadCartFromStorage = (): CartItem[] => {
+  try {
+    const key = getCartKey();
     const storedCart = localStorage.getItem(key);
     return storedCart ? (JSON.parse(storedCart) as CartItem[]) : [];
   } catch (error) {
@@ -37,60 +44,50 @@ const loadCartFromStorage = (userId?: string): CartItem[] => {
 };
 
 const initialState: CartState = {
-  cartItems: loadCartFromStorage(savedUser?._id),
+  cartItems: loadCartFromStorage(),
 };
 
 const cartSlice = createSlice({
   name: "cart",
   initialState,
   reducers: {
-    // Naya Reducer: Login/Logout par cart data user ke mutabiq switch karne ke liye
-    initializeCart: (state, action: PayloadAction<string | undefined>) => {
-      state.cartItems = loadCartFromStorage(action.payload);
+    // Login/Logout par cart data user ke mutabiq switch karne ke liye
+    initializeCart: (state) => {
+      state.cartItems = loadCartFromStorage();
     },
 
     // 1. Cart mein item add ya update karne ka function
     addToCart: (state, action: PayloadAction<CartItem>) => {
-      const item = action.payload; // Jo naya item add karna hai
-
-      // Check kar rahe hain ke kya ye item pehle se cart mein maujood hai?
+      const item = action.payload;
       const existItem = state.cartItems.find((x) => x.product === item.product);
 
       if (existItem) {
-        // Agar item pehle se hai, to purane item ko naye data (updated quantity) se badal do
         state.cartItems = state.cartItems.map((x) =>
-          x.product === existItem.product ? item : x,
+          x.product === existItem.product ? item : x
         );
       } else {
-        // Agar item naya hai, to cartItems array mein push (add) kar do
         state.cartItems.push(item);
       }
 
-      // Updated cart ko User Specific LocalStorage mein save kar rahe hain
-      const savedUser = localStorage.getItem("userInfo") ? JSON.parse(localStorage.getItem("userInfo")!) : null;
-      localStorage.setItem(getCartKey(savedUser?._id), JSON.stringify(state.cartItems));
+      localStorage.setItem(getCartKey(), JSON.stringify(state.cartItems));
     },
 
     // 2. Cart se item delete karne ka function
     removeFromCart: (state, action: PayloadAction<string>) => {
       state.cartItems = state.cartItems.filter(
-        (x) => x.product !== action.payload,
+        (x) => x.product !== action.payload
       );
 
-      // Nayi list ko User Specific LocalStorage mein overwrite kar rahe hain
-      const savedUser = localStorage.getItem("userInfo") ? JSON.parse(localStorage.getItem("userInfo")!) : null;
-      localStorage.setItem(getCartKey(savedUser?._id), JSON.stringify(state.cartItems));
+      localStorage.setItem(getCartKey(), JSON.stringify(state.cartItems));
     },
 
-    // 3. Poora cart khali karne ka function (e.g., Order complete hone ke baad)
+    // 3. Poora cart khali karne ka function
     clearCart: (state) => {
-      state.cartItems = []; // State khali kar di
-      const savedUser = localStorage.getItem("userInfo") ? JSON.parse(localStorage.getItem("userInfo")!) : null;
-      localStorage.removeItem(getCartKey(savedUser?._id)); // User specific data ura diya
+      state.cartItems = [];
+      localStorage.removeItem(getCartKey());
     },
   },
 });
 
-// Actions aur Reducer ko export kar rahe hain taake store aur components mein use ho sakein
 export const { initializeCart, addToCart, removeFromCart, clearCart } = cartSlice.actions;
 export default cartSlice.reducer;

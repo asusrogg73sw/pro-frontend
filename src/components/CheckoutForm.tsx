@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useStripe,
@@ -7,15 +7,17 @@ import {
   CardExpiryElement,
   CardCvcElement,
 } from "@stripe/react-stripe-js";
-import type { StripeCardNumberElementChangeEvent } from "@stripe/stripe-js";
+import type { StripeCardNumberElementChangeEvent, StripeCardExpiryElementChangeEvent } from "@stripe/stripe-js";
 import { CreditCard, ShieldCheck, Lock, Loader2 } from "lucide-react";
 import API from "../api/axios";
-import { useAppSelector } from "../store/hooks";
+import { useAppDispatch } from "../store/hooks";
+import { clearCart } from "../store/cartSlice";
 
 interface CheckoutFormProps {
   orderId: string;
   totalPrice: number;
   customerEmail: string;
+  receiverName: string;
   onSuccess: () => Promise<void>;
 }
 
@@ -31,19 +33,27 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
   orderId,
   totalPrice,
   customerEmail,
+  receiverName,
   onSuccess,
 }) => {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
-  const { userInfo } = useAppSelector((state) => state.auth);
+  const dispatch = useAppDispatch();
   
+  const isMounted = useRef(true);
   const [paying, setPaying] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [cardNumberDisplay, setCardNumberDisplay] = useState("•••• •••• •••• ••••");
   const [cardExpiryDisplay, setCardExpiryDisplay] = useState("MM/YY");
   const [cardBrand, setCardBrand] = useState("unknown");
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const elementOptions = {
     style: {
@@ -57,15 +67,26 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
     },
   };
 
-  // 🚀 FIX: Typed explicit change event wrapper to remove 'any' rule violation
   const handleCardNumberChange = (event: StripeCardNumberElementChangeEvent) => {
     if (event.brand) {
       setCardBrand(event.brand);
     }
-    if (event.complete) {
-      setCardNumberDisplay("4242 4242 4242 4242");
+    
+    // Safe cast access logic configuration
+    const rawEvent = event as any;
+    if (event.complete && rawEvent.last4) {
+      setCardNumberDisplay(`•••• •••• •••• ${rawEvent.last4}`);
     } else {
       setCardNumberDisplay("•••• •••• •••• ••••");
+    }
+  };
+
+  const handleExpiryChange = (event: StripeCardExpiryElementChangeEvent) => {
+    // ✅ UX ENHANCEMENT: Instead of flashing a harsh string "VALID", we subtly update color/text styling or keep cleanly reactive placeholders
+    if (event.complete) {
+      setCardExpiryDisplay("READY");
+    } else {
+      setCardExpiryDisplay("MM/YY");
     }
   };
 
@@ -77,14 +98,12 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       setPaying(true);
       setErrorMessage(null);
 
-      const { data } = await API.post("/payment/process", { 
-        orderId
-      });
+      const { data } = await API.post("/payment/process", { orderId });
       const clientSecret = data.client_secret;
 
       const cardElement = elements.getElement(CardNumberElement);
       if (!cardElement) {
-        setPaying(false);
+        if (isMounted.current) setPaying(false);
         return;
       }
 
@@ -93,33 +112,42 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
           card: cardElement,
           billing_details: { 
             email: customerEmail,
-            name: userInfo?.name || undefined
+            name: receiverName || "Anonymous Customer" 
           },
         },
       });
 
       if (result.error) {
-        setErrorMessage(result.error.message || "Payment Declined.");
-        setPaying(false);
+        if (isMounted.current) {
+          setErrorMessage(result.error.message || "Payment Declined.");
+          setPaying(false);
+        }
       } else if (result.paymentIntent?.status === "succeeded") {
         await API.put(`/orders/${orderId}/pay`, {
           id: result.paymentIntent.id,
           status: result.paymentIntent.status,
         });
 
+        localStorage.removeItem("activeProcessingOrderId");
+        dispatch(clearCart());
+
         await onSuccess();
-        navigate("/my-orders");
+        if (isMounted.current) {
+          navigate("/my-orders");
+        }
       }
     } catch (err) {
-      // 🚀 FIX: Safely cast unknown error type structure to bypass explicit 'any' linting
       const errorBridge = err as AxiosErrorStructure;
-      setErrorMessage(errorBridge.response?.data?.message || "Internal transaction error occurred.");
-      setPaying(false);
+      if (isMounted.current) {
+        setErrorMessage(errorBridge.response?.data?.message || "Internal transaction error occurred.");
+        setPaying(false);
+      }
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Visual Credit Card Frame Preview */}
       <div className="relative overflow-hidden bg-linear-to-br from-slate-900 via-indigo-950 to-blue-900 h-48 rounded-2xl p-6 text-white shadow-xl flex flex-col justify-between transform transition duration-300 border border-white/10 select-none">
         <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500/10 rounded-full blur-2xl"></div>
         
@@ -131,9 +159,9 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
             </div>
           </div>
           {cardBrand === "visa" ? (
-            <span className="text-xl font-black italic text-white tracking-tight">VISA</span>
+            <span className="text-xl font-black italic text-white tracking-tight animate-fadeIn">VISA</span>
           ) : cardBrand === "mastercard" ? (
-            <span className="text-xl font-black italic text-red-400 tracking-tight">MasterCard</span>
+            <span className="text-xl font-black italic text-red-400 tracking-tight animate-fadeIn">MasterCard</span>
           ) : (
             <CreditCard size={26} className="text-blue-300 opacity-80" />
           )}
@@ -144,17 +172,22 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
         </div>
 
         <div className="flex justify-between items-end">
-          <div className="max-w-40">
+          <div className="max-w-[70%] truncate">
             <p className="text-[9px] uppercase font-mono text-slate-400 tracking-wider">Card Holder</p>
-            <p className="text-xs font-bold font-mono tracking-wide truncate">{customerEmail.split('@')[0].toUpperCase()}</p>
+            <p className="text-xs font-bold font-mono tracking-wide truncate uppercase">
+              {receiverName?.trim() ? receiverName : "Customer Profile Name Missing"}
+            </p>
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <p className="text-[9px] uppercase font-mono text-slate-400 tracking-wider">Expires</p>
-            <p className="text-xs font-bold font-mono tracking-wide">{cardExpiryDisplay}</p>
+            <p className={`text-xs font-bold font-mono tracking-wide ${cardExpiryDisplay === "READY" ? "text-emerald-400 font-extrabold" : ""}`}>
+              {cardExpiryDisplay}
+            </p>
           </div>
         </div>
       </div>
 
+      {/* Stripe Input Forms Container */}
       <div className="space-y-4">
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-gray-600 block">Card Number</label>
@@ -167,10 +200,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-600 block">Expiration Date</label>
             <div className="p-3.5 bg-gray-50 border border-gray-200 rounded-xl focus-within:border-blue-500 focus-within:bg-white shadow-inner transition">
-              <CardExpiryElement 
-                options={elementOptions} 
-                onChange={(e) => setCardExpiryDisplay(e.complete ? "Valid" : "MM/YY")}
-              />
+              <CardExpiryElement options={elementOptions} onChange={handleExpiryChange} />
             </div>
           </div>
           <div className="space-y-1.5">
@@ -183,7 +213,7 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
       </div>
 
       {errorMessage && (
-        <div className="text-xs text-red-600 bg-red-50 p-3 rounded-xl font-medium border border-red-100">
+        <div className="text-xs text-red-600 bg-red-50 p-3 rounded-xl font-medium border border-red-100 animate-fadeIn">
           ❌ {errorMessage}
         </div>
       )}
@@ -213,3 +243,5 @@ export const CheckoutForm: React.FC<CheckoutFormProps> = ({
     </form>
   );
 };
+
+export default CheckoutForm;

@@ -18,10 +18,13 @@ export interface Order {
   } | string; 
   orderItems: OrderItem[];
   shippingAddress: {
+    firstName: string;   // 🚀 Added to match schema persistence
+    lastName: string;    // 🚀 Added to match schema persistence
     address: string;
     city: string;
     postalCode: string;
     country: string;
+    phone: string;       // 🚀 Added to match schema persistence
   };
   paymentMethod: string;
   itemsPrice: number;

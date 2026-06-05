@@ -53,6 +53,9 @@ export const loginUser = createAsyncThunk(
       const response = await API.post("/users/login", userData);
       localStorage.setItem("userInfo", JSON.stringify(response.data));
       
+      // ✅ SAFETY PATCH: Login ke waqt pichle kisi bhi dirty record ki clean up
+      localStorage.removeItem("activeProcessingOrderId");
+      
       // Login hotey hi naye user ki ID ke sath cart initialize karo
       dispatch(initializeCart(response.data._id));
       
@@ -69,9 +72,11 @@ export const registerUserAction = createAsyncThunk(
   "auth/register",
   async (userData: RegisterCredentials, { dispatch, rejectWithValue }) => {
     try {
-      // Backend routes ke mutabiq POST /api/users register ke liye hai
       const response = await API.post("/users", userData);
       localStorage.setItem("userInfo", JSON.stringify(response.data));
+      
+      // ✅ SAFETY PATCH: Register ke waqt pichle context ki safai
+      localStorage.removeItem("activeProcessingOrderId");
       
       // Registration ke sath hi user specific cart active kar do
       dispatch(initializeCart(response.data._id));
@@ -92,10 +97,17 @@ export const logoutUser = createAsyncThunk(
       await API.post("/users/logout");
       localStorage.removeItem("userInfo");
       
+      // ✅ CRITICAL BUG FIX: Clear out the tracked order context to prevent cross-user leakage
+      localStorage.removeItem("activeProcessingOrderId");
+      
       // Logout par cart ko default guest ya empty state par reset karo
       dispatch(initializeCart(undefined));
     } catch { 
-      return rejectWithValue("Logout failed");
+      // Fallback: Agar network fail bhi ho jaye, local keys har haal mein urani hain
+      localStorage.removeItem("userInfo");
+      localStorage.removeItem("activeProcessingOrderId");
+      dispatch(initializeCart(undefined));
+      return rejectWithValue("Logout completed with local storage cleanup fallback.");
     }
   },
 );
@@ -150,6 +162,11 @@ const authSlice = createSlice({
       })
       // Logout flow
       .addCase(logoutUser.fulfilled, (state) => {
+        state.userInfo = null;
+        state.error = null;
+      })
+      .addCase(logoutUser.rejected, (state) => {
+        // Safe UI boundary sync on rejection
         state.userInfo = null;
         state.error = null;
       });

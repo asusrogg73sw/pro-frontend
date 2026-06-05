@@ -10,13 +10,14 @@ const CartPage = () => {
   const cartItems = useAppSelector((state) => state.cart.cartItems);
   const { userInfo } = useAppSelector((state) => state.auth);
 
-  // Math Calculations
+  // Math Calculations with Strict Floating-Point Precision
   const itemsPrice = cartItems.reduce(
     (acc: number, item: CartItem) => acc + item.price * item.qty,
-    0,
+    0
   );
-  const shippingPrice = itemsPrice > 100 ? 0 : 10;
-  const totalPrice = itemsPrice + shippingPrice;
+  
+  const shippingPrice = itemsPrice > 100 || itemsPrice === 0 ? 0 : 10;
+  const totalPrice = Number((itemsPrice + shippingPrice).toFixed(2));
 
   const decreaseQtyHandler = (item: CartItem) => {
     if (item.qty > 1) {
@@ -33,7 +34,6 @@ const CartPage = () => {
   const checkoutHandler = () => {
     if (cartItems.length === 0) return;
     
-    // ✅ INDUSTRY STANDARD: Direct order create nahi hoga. Pehle user shipping info screen par jayega.
     if (!userInfo) {
       navigate("/login?redirect=/shipping");
     } else {
@@ -62,20 +62,40 @@ const CartPage = () => {
 
                 <div className="flex-1 ml-4">
                   <h4 className="font-bold text-gray-800 text-base">{item.name}</h4>
-                  <p className="text-sm text-blue-600 font-semibold">${item.price}</p>
+                  <p className="text-sm text-blue-600 font-semibold">${item.price.toFixed(2)}</p>
                 </div>
 
                 <div className="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden mx-4">
-                  <button onClick={() => decreaseQtyHandler(item)} disabled={item.qty <= 1} className="px-3 py-2 text-gray-500 hover:bg-gray-50 active:bg-gray-100 font-bold transition disabled:opacity-40 disabled:cursor-not-allowed">—</button>
-                  <span className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-x border-gray-100 min-w-10 text-center select-none">{item.qty}</span>
-                  <button onClick={() => increaseQtyHandler(item)} disabled={item.qty >= item.countInStock} className="px-3 py-2 text-gray-500 hover:bg-gray-50 active:bg-gray-100 font-bold transition disabled:opacity-40 disabled:cursor-not-allowed">+</button>
+                  <button 
+                    onClick={() => decreaseQtyHandler(item)} 
+                    disabled={item.qty <= 1} 
+                    className="px-3 py-2 text-gray-500 hover:bg-gray-50 active:bg-gray-100 font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    —
+                  </button>
+                  <span className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border-x border-gray-100 min-w-10 text-center select-none">
+                    {item.qty}
+                  </span>
+                  <button 
+                    onClick={() => increaseQtyHandler(item)} 
+                    disabled={item.qty >= item.countInStock} 
+                    className="px-3 py-2 text-gray-500 hover:bg-gray-50 active:bg-gray-100 font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    +
+                  </button>
                 </div>
 
                 <div className="text-sm font-bold text-gray-800 min-w-17.5 text-right mr-4">
                   ${(item.price * item.qty).toFixed(2)}
                 </div>
 
-                <button onClick={() => dispatch(removeFromCart(item.product))} className="text-gray-400 hover:text-red-500 font-medium text-xl p-2 rounded-lg transition" title="Remove Item">✕</button>
+                <button 
+                  onClick={() => dispatch(removeFromCart(item.product))} 
+                  className="text-gray-400 hover:text-red-500 font-medium text-xl p-2 rounded-lg transition" 
+                  title="Remove Item"
+                >
+                  ✕
+                </button>
               </div>
             ))}
           </div>
@@ -85,19 +105,22 @@ const CartPage = () => {
             <h3 className="font-bold text-lg text-gray-800 border-b pb-2">Order Summary</h3>
             <div className="flex justify-between text-sm text-gray-600">
               <span>Subtotal Items:</span>
-              <span>${itemsPrice}</span>
+              <span>${itemsPrice.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-sm text-gray-600">
               <span>Shipping Fee:</span>
-              <span>{shippingPrice === 0 ? "Free" : `$${shippingPrice}`}</span>
+              <span>{shippingPrice === 0 ? "Free" : `$${shippingPrice.toFixed(2)}`}</span>
             </div>
             <hr className="border-gray-200" />
             <div className="flex justify-between font-bold text-base text-gray-900">
               <span>Total Bill:</span>
-              <span>${totalPrice}</span>
+              <span>${totalPrice.toFixed(2)}</span>
             </div>
 
-            <button onClick={checkoutHandler} className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100">
+            <button 
+              onClick={checkoutHandler} 
+              className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100"
+            >
               Proceed to Shipping Info 🚀
             </button>
           </div>
